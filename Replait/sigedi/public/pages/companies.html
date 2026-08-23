@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Empresas - SIGETI</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .table-container {
+            background: var(--surface-color);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-color);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th,
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.9rem;
+        }
+
+        th {
+            background-color: var(--bg-color);
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-client {
+            background: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+        }
+
+        .badge-provider {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">SIGETI</div>
+            <ul class="nav-menu">
+                <li><a href="dashboard.html"><i data-lucide="layout-dashboard"></i> Dashboard</a></li>
+                <li><a href="equipments.html"><i data-lucide="monitor"></i> Equipamentos</a></li>
+                <li><a href="allocations.html"><i data-lucide="briefcase"></i> Alocações Ativas</a></li>
+                <li><a href="companies.html" class="active"><i data-lucide="building"></i> Todas Empresas</a></li>
+                <li><a href="history.html"><i data-lucide="history"></i> Histórico</a></li>
+                <li><a href="control-panel.html"><i data-lucide="settings"></i> Painel de Controle</a></li>
+                <li><a href="#" id="logoutBtn"><i data-lucide="log-out"></i> Sair</a></li>
+            </ul>
+        </aside>
+
+        <main class="main-content">
+            <div class="header-actions">
+                <h2>Todas as Empresas Cadastradas</h2>
+                <input type="text" id="searchComp" placeholder="Filtrar empresas..." style="width: 300px;">
+            </div>
+
+            <div class="table-container">
+                <table id="companiesTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nome</th>
+                            <th>CNPJ</th>
+                            <th>Tipo</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Preenchido via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        const token = localStorage.getItem('sigeti_token');
+        if (!token) window.location.href = '/';
+        document.getElementById('logoutBtn').addEventListener('click', () => { localStorage.clear(); window.location.href = '/'; });
+
+        async function loadCompanies() {
+            try {
+                const res = await fetch('/api/companies', { headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await res.json();
+
+                const tbody = document.querySelector('#companiesTable tbody');
+                tbody.innerHTML = '';
+
+                if (data.success && data.data.length > 0) {
+                    data.data.forEach(c => {
+                        const badgeClass = c.type === 'CLIENT' ? 'badge-client' : 'badge-provider';
+                        const typeLabel = c.type === 'CLIENT' ? 'Cliente' : 'Prestadora';
+
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${c.id}</td>
+                                <td><strong><a href="company-details.html?id=${c.id}" style="color: var(--primary-color); text-decoration: none;">${c.name}</a></strong></td>
+                                <td>${c.cnpj || 'N/A'}</td>
+                                <td><span class="badge ${badgeClass}">${typeLabel}</span></td>
+                                <td>
+                                    <button class="btn" style="padding: 0.3rem 0.6rem; background: var(--primary-color); font-size: 0.75rem;" onclick="editCompany(${c.id}, '${encodeURIComponent(c.name)}', '${encodeURIComponent(c.cnpj || '')}', '${c.type}')">Editar</button>
+                                    <button class="btn" style="padding: 0.3rem 0.6rem; background: var(--danger); font-size: 0.75rem;" onclick="deleteCompany(${c.id}, '${c.name}')">Excluir</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    lucide.createIcons();
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Nenhuma empresa cadastrada.</td></tr>`;
+                }
+            } catch (error) {
+                console.error('Erro ao carregar empresas', error);
+            }
+        }
+
+        async function editCompany(id, encodedName, encodedCnpj, currentType) {
+            const newName = prompt('Novo nome da empresa:', decodeURIComponent(encodedName));
+            if (newName === null) return;
+            const newCnpj = prompt('Novo CNPJ:', decodeURIComponent(encodedCnpj));
+            if (newCnpj === null) return;
+
+            try {
+                const res = await fetch(`/api/companies/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ name: newName, cnpj: newCnpj, type: currentType })
+                });
+                const data = await res.json();
+                alert(data.message);
+                if (data.success) loadCompanies();
+            } catch (error) {
+                alert('Erro ao editar empresa.');
+            }
+        }
+
+        async function deleteCompany(id, name) {
+            try {
+                const checkRes = await fetch(`/api/companies/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ check_only: true })
+                });
+                const checkResult = await checkRes.json();
+                if (!checkRes.ok) {
+                    alert(`${checkResult.message}\n\n${(checkResult.dependencies || []).map(item => `- ${item}`).join('\n')}`);
+                    return;
+                }
+
+                const deleteHistory = confirm(`Deseja excluir também os históricos relacionados à empresa "${name}"?`);
+                const res = await fetch(`/api/companies/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ delete_history: deleteHistory })
+                });
+
+                const result = await res.json();
+                alert(result.message);
+                if (result.success) loadCompanies();
+            } catch (error) {
+                alert('Erro ao excluir empresa.');
+            }
+        }
+
+        document.getElementById('searchComp').addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('#companiesTable tbody tr');
+            rows.forEach(row => {
+                row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none';
+            });
+        });
+
+        loadCompanies();
+    </script>
+</body>
+
+</html>

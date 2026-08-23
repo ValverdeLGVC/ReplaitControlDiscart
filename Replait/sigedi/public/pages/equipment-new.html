@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Novo Equipamento - SIGETI</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .form-card {
+            background: var(--surface-color);
+            padding: 2rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-color);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-main);
+        }
+
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 2rem;
+            border-top: 1px solid var(--border-color);
+            padding-top: 1.5rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">SIGETI</div>
+            <ul class="nav-menu">
+                <li><a href="dashboard.html"><i data-lucide="layout-dashboard"></i> Dashboard</a></li>
+                <li><a href="equipments.html"><i data-lucide="monitor"></i> Equipamentos</a></li>
+                <li><a href="allocations.html"><i data-lucide="briefcase"></i> Minhas Alocações</a></li>
+                <li><a href="companies.html"><i data-lucide="building"></i> Todas Empresas</a></li>
+                <li><a href="users.html"><i data-lucide="users"></i> Usuários & Profissionais</a></li>
+                <li><a href="history.html"><i data-lucide="history"></i> Histórico</a></li>
+                <li><a href="control-panel.html"><i data-lucide="settings"></i> Painel de Controle</a></li>
+                <li><a href="#" id="logoutBtn"><i data-lucide="log-out"></i> Sair</a></li>
+            </ul>
+        </aside>
+
+        <main class="main-content">
+            <header style="margin-bottom: 2rem;">
+                <h2>Cadastrar Novo Equipamento</h2>
+            </header>
+
+            <div class="form-card">
+                <form id="equipmentForm">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Nome do Equipamento *</label>
+                            <input type="text" id="name" required placeholder="Ex: Notebook Corporativo">
+                        </div>
+                        <div class="form-group">
+                            <label>Categoria *</label>
+                            <select id="category_id" required>
+                                <option value="">Carregando...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Empresa Cliente (Alocação) *</label>
+                            <select id="client_company_id" required>
+                                <option value="">Carregando...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Situação *</label>
+                            <select id="status" required>
+                                <option value="Funcionando">Funcionando</option>
+                                <option value="Funcionando parcialmente">Funcionando parcialmente</option>
+                                <option value="Danificado">Danificado</option>
+                                <option value="Sem teste">Sem teste</option>
+                                <option value="Em manutenção">Em manutenção</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Equipamento Funciona? *</label>
+                            <select id="is_working" required>
+                                <option value="true">SIM</option>
+                                <option value="false">NÃO</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Fabricante</label>
+                            <input type="text" id="manufacturer" placeholder="Ex: Dell, HP, Lenovo">
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn" style="background: var(--text-muted);"
+                            onclick="window.location.href='equipments.html'">Cancelar</button>
+                        <button type="submit" class="btn">Salvar Equipamento</button>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        const token = localStorage.getItem('sigeti_token');
+        if (!token) window.location.href = '/';
+
+        // Carregar selects no carregamento da página
+        async function loadFormData() {
+            try {
+                // Busca Categorias
+                const catRes = await fetch('/api/categories', { headers: { 'Authorization': `Bearer ${token}` } });
+                const catData = await catRes.json();
+                const catSelect = document.getElementById('category_id');
+                catSelect.innerHTML = '<option value="">Selecione...</option>';
+                catData.data.forEach(c => catSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`);
+
+                // Busca Empresas
+                const compRes = await fetch('/api/companies', { headers: { 'Authorization': `Bearer ${token}` } });
+                const compData = await compRes.json();
+                const compSelect = document.getElementById('client_company_id');
+                compSelect.innerHTML = '<option value="">Selecione...</option>';
+                compData.data.forEach(c => compSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`);
+            } catch (error) {
+                console.error("Erro ao carregar dados do formulário.");
+            }
+        }
+
+        document.getElementById('equipmentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const payload = {
+                name: document.getElementById('name').value,
+                category_id: document.getElementById('category_id').value,
+                client_company_id: document.getElementById('client_company_id').value,
+                status: document.getElementById('status').value,
+                is_working: document.getElementById('is_working').value === 'true',
+                manufacturer: document.getElementById('manufacturer').value,
+                specs: {} // Mantido preparado para o futuro como JSON
+            };
+
+            try {
+                const response = await fetch('/api/equipments', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    alert('Equipamento cadastrado com sucesso!');
+                    window.location.href = 'equipments.html';
+                } else {
+                    alert('Erro: ' + data.message);
+                }
+            } catch (error) {
+                alert('Erro ao conectar com o servidor.');
+            }
+        });
+
+        loadFormData();
+    </script>
+</body>
+
+</html>

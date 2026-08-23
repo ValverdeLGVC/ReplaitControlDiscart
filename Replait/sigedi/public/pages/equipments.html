@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventário de Equipamentos - SIGETI</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .table-container {
+            background: var(--surface-color);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-color);
+            overflow-x: auto;
+            margin-bottom: 2rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th,
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.9rem;
+        }
+
+        th {
+            background-color: var(--bg-color);
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .form-box {
+            background: var(--surface-color);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+            margin-bottom: 2rem;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">SIGETI</div>
+            <ul class="nav-menu">
+                <li><a href="dashboard.html"><i data-lucide="layout-dashboard"></i> Dashboard</a></li>
+                <li><a href="equipments.html" class="active"><i data-lucide="monitor"></i> Equipamentos</a></li>
+                <li><a href="allocations.html"><i data-lucide="briefcase"></i> Alocações Ativas</a></li>
+                <li><a href="companies.html"><i data-lucide="building"></i> Todas Empresas</a></li>
+                <li><a href="history.html"><i data-lucide="history"></i> Histórico</a></li>
+                <li><a href="control-panel.html"><i data-lucide="settings"></i> Painel de Controle</a></li>
+                <li><a href="#" id="logoutBtn"><i data-lucide="log-out"></i> Sair</a></li>
+            </ul>
+        </aside>
+
+        <main class="main-content">
+            <div class="header-actions">
+                <h2>Inventário de Equipamentos</h2>
+                <input type="text" id="searchEquip" placeholder="Filtrar equipamentos..." style="width: 250px;">
+            </div>
+
+            <div class="form-box">
+                <h3 style="margin-bottom: 1rem; font-size: 1rem; color: var(--primary-color);">Cadastrar Novo
+                    Equipamento</h3>
+                <form id="formEquipment" class="form-grid">
+                    <input type="text" id="eqPatrimony" placeholder="Nº Patrimônio">
+                    <input type="text" id="eqCodename" placeholder="Codinome">
+                    <input type="text" id="eqName" required placeholder="Nome do Equipamento">
+                    <input type="text" id="eqSerial" placeholder="Número de Série">
+                    <input type="text" id="eqManufacturer" placeholder="Fabricante">
+                    <input type="text" id="eqModel" placeholder="Modelo">
+                    <select id="eqCompany" required>
+                        <option value="">Carregando empresas...</option>
+                    </select>
+                    <button type="submit" class="btn" style="grid-column: 1 / -1;">Salvar Equipamento</button>
+                </form>
+            </div>
+
+            <div class="table-container">
+                <table id="equipmentTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Patrimônio</th>
+                            <th>Equipamento</th>
+                            <th>Nº de Série</th>
+                            <th>Status</th>
+                            <th>Empresa Destino</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Gerado via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        const token = localStorage.getItem('sigeti_token');
+        if (!token) window.location.href = '/';
+        document.getElementById('logoutBtn').addEventListener('click', () => { localStorage.clear(); window.location.href = '/'; });
+
+        async function loadSelectCompanies() {
+            try {
+                const res = await fetch('/api/companies', { headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await res.json();
+                const select = document.getElementById('eqCompany');
+                select.innerHTML = '<option value="">Selecione a empresa cliente...</option>';
+                if (data.success) {
+                    data.data.forEach(c => {
+                        if (c.type === 'CLIENT') {
+                            select.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+                        }
+                    });
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        async function loadEquipments() {
+            try {
+                const res = await fetch('/api/equipment', { headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await res.json();
+                const tbody = document.querySelector('#equipmentTable tbody');
+                tbody.innerHTML = '';
+
+                if (data.success && data.data.length > 0) {
+                    data.data.forEach(eq => {
+                        const companyDisplay = eq.company_name ? eq.company_name : '<span style="color: var(--danger);">Sem Empresa</span>';
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${eq.id}</td>
+                                <td>${eq.patrimony_code || 'N/A'}</td>
+                                <td><strong>${eq.name}</strong></td>
+                                <td>${eq.serial_number || 'N/A'}</td>
+                                <td><span style="background: var(--bg-color); padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">${eq.status}</span></td>
+                                <td>${companyDisplay}${eq.company_id ? ` <small>(ID: ${eq.company_id})</small>` : ''}</td>
+                                <td>
+                                    <button class="btn" style="padding: 0.3rem 0.5rem; background: var(--primary-color); font-size: 0.7rem;" onclick="relocateEquipment(${eq.id}, '${eq.name}')">Realocar</button>
+                                    <button class="btn" style="padding: 0.3rem 0.5rem; background: var(--danger); font-size: 0.7rem;" onclick="deleteEquipment(${eq.id}, '${eq.name}')">Excluir</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    lucide.createIcons();
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Nenhum equipamento cadastrado.</td></tr>`;
+                }
+            } catch (error) { console.error(error); }
+        }
+
+        document.getElementById('formEquipment').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                patrimony: document.getElementById('eqPatrimony').value,
+                codename: document.getElementById('eqCodename').value,
+                name: document.getElementById('eqName').value,
+                serial_number: document.getElementById('eqSerial').value,
+                manufacturer: document.getElementById('eqManufacturer').value,
+                model: document.getElementById('eqModel').value,
+                client_company_id: document.getElementById('eqCompany').value,
+                status: 'Funcionando'
+            };
+
+            const res = await fetch('/api/equipment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            alert(data.message);
+            if (data.success) { e.target.reset(); loadEquipments(); }
+        });
+
+        async function deleteEquipment(id, name) {
+            try {
+                const checkRes = await fetch(`/api/equipment/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ check_only: true })
+                });
+                const checkData = await checkRes.json();
+                if (!checkRes.ok) {
+                    alert(`${checkData.message}\n\n${(checkData.dependencies || []).map(item => `- ${item}`).join('\n')}`);
+                    return;
+                }
+
+                const deleteHistory = confirm(`Deseja excluir também os históricos relacionados ao material "${name}"?`);
+                const res = await fetch(`/api/equipment/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ delete_history: deleteHistory })
+                });
+                const data = await res.json();
+                alert(data.message);
+                if (data.success) loadEquipments();
+            } catch (error) {
+                alert('Erro ao excluir equipamento.');
+            }
+        }
+
+        async function relocateEquipment(id, name) {
+            const newCompId = prompt(`Digite o ID da nova empresa cliente para o equipamento "${name}":`);
+            if (!newCompId) return;
+            const res = await fetch(`/api/equipment/${id}/relocate`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ client_company_id: Number(newCompId), status: 'Funcionando' })
+            });
+            const data = await res.json();
+            alert(data.message);
+            if (data.success) loadEquipments();
+        }
+
+        loadSelectCompanies();
+        loadEquipments();
+    </script>
+</body>
+
+</html>

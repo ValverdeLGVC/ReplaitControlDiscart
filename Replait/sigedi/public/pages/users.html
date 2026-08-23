@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Usuários - SIGETI</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .table-container {
+            background: var(--surface-color);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-color);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th,
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.9rem;
+        }
+
+        th {
+            background-color: var(--bg-color);
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">SIGETI</div>
+            <ul class="nav-menu">
+                <li><a href="dashboard.html"><i data-lucide="layout-dashboard"></i> Dashboard</a></li>
+                <li><a href="equipments.html"><i data-lucide="monitor"></i> Equipamentos</a></li>
+                <li><a href="companies.html"><i data-lucide="building"></i> Todas Empresas</a></li>
+                <li><a href="users.html" class="active"><i data-lucide="users"></i> Usuários & Profissionais</a></li>
+                <li><a href="control-panel.html"><i data-lucide="settings"></i> Painel de Controle</a></li>
+                <li><a href="#" id="logoutBtn"><i data-lucide="log-out"></i> Sair</a></li>
+            </ul>
+        </aside>
+
+        <main class="main-content">
+            <div class="header-actions">
+                <h2>Gestão de Usuários e Profissionais</h2>
+            </div>
+
+            <div class="table-container">
+                <table id="usersTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nome</th>
+                            <th>E-mail</th>
+                            <th>Função</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Preenchido via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        const token = localStorage.getItem('sigeti_token');
+        if (!token) window.location.href = '/';
+        document.getElementById('logoutBtn').addEventListener('click', () => { localStorage.clear(); window.location.href = '/'; });
+
+        async function loadUsers() {
+            try {
+                const res = await fetch('/api/professionals', { headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await res.json();
+
+                const tbody = document.querySelector('#usersTable tbody');
+                tbody.innerHTML = '';
+
+                if (data.success && data.data.length > 0) {
+                    // Como a rota de profissionais traz a base, vamos listar
+                    data.data.forEach(u => {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${u.user_id}</td>
+                                <td><strong>${u.name}</strong></td>
+                                <td>${u.email || 'N/A'}</td>
+                                <td><span style="background: var(--bg-color); padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">${u.provider}</span></td>
+                                <td>
+                                    <button class="btn" style="padding: 0.3rem 0.6rem; background: var(--primary-color); font-size: 0.75rem;" onclick="editUser(${u.user_id}, '${encodeURIComponent(u.name)}', '${encodeURIComponent(u.email || '')}', '${encodeURIComponent(u.role || 'USER')}', '${encodeURIComponent(u.phone || '')}')">
+                                        Editar
+                                    </button>
+                                    <button class="btn" style="padding: 0.3rem 0.6rem; background: var(--danger); font-size: 0.75rem;" onclick="deleteUser(${u.user_id}, '${u.name}')">
+                                        <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i> Excluir
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    lucide.createIcons();
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Nenhum usuário encontrado.</td></tr>`;
+                }
+            } catch (error) {
+                console.error('Erro ao carregar usuários', error);
+            }
+        }
+
+        async function editUser(id, encodedName, encodedEmail, encodedRole, encodedPhone) {
+            const name = prompt('Nome do usuário:', decodeURIComponent(encodedName));
+            if (name === null) return;
+            const email = prompt('E-mail:', decodeURIComponent(encodedEmail));
+            if (email === null) return;
+            const role = prompt('Perfil (ADMIN ou USER):', decodeURIComponent(encodedRole));
+            if (role === null) return;
+            const phone = prompt('Telefone:', decodeURIComponent(encodedPhone));
+            if (phone === null) return;
+
+            try {
+                const res = await fetch(`/api/users/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ name, email, role: role.toUpperCase(), phone })
+                });
+                const result = await res.json();
+                alert(result.message);
+                if (result.success) loadUsers();
+            } catch (error) {
+                alert('Erro ao editar usuário.');
+            }
+        }
+
+        async function deleteUser(id, name) {
+            try {
+                const checkRes = await fetch(`/api/users/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ check_only: true })
+                });
+                const checkResult = await checkRes.json();
+                if (!checkRes.ok) {
+                    alert(`${checkResult.message}\n\n${(checkResult.dependencies || []).map(item => `- ${item}`).join('\n')}`);
+                    return;
+                }
+
+                const deleteHistory = confirm(`Deseja excluir também os históricos relacionados ao usuário "${name}"?`);
+                const res = await fetch(`/api/users/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ delete_history: deleteHistory })
+                });
+                const result = await res.json();
+                alert(result.message);
+                if (result.success) loadUsers();
+            } catch (error) {
+                alert('Erro ao excluir usuário.');
+            }
+        }
+
+        loadUsers();
+    </script>
+</body>
+
+</html>

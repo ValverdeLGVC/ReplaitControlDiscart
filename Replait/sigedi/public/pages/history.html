@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Histórico - SIGETI</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .table-container {
+            background: var(--surface-color);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-color);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th,
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--bg-color);
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .action-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            background: var(--bg-color);
+            color: var(--primary-color);
+            border: 1px solid var(--border-color);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">SIGETI</div>
+            <ul class="nav-menu">
+                <li><a href="dashboard.html"><i data-lucide="layout-dashboard"></i> Dashboard</a></li>
+                <li><a href="equipments.html"><i data-lucide="monitor"></i> Equipamentos</a></li>
+                <li><a href="allocations.html"><i data-lucide="briefcase"></i> Minhas Alocações</a></li>
+                <li><a href="companies.html"><i data-lucide="building"></i> Todas Empresas</a></li>
+                <li><a href="users.html"><i data-lucide="users"></i> Usuários & Profissionais</a></li>
+                <li><a href="history.html"><i data-lucide="history"></i> Histórico</a></li>
+                <li><a href="control-panel.html"><i data-lucide="settings"></i> Painel de Controle</a></li>
+                <li><a href="#" id="logoutBtn"><i data-lucide="log-out"></i> Sair</a></li>
+            </ul>
+        </aside>
+
+        <main class="main-content">
+            <div class="header-actions">
+                <h2>Trilha de Auditoria (Histórico)</h2>
+                <button class="btn" style="background: var(--danger);" onclick="clearAllHistory()"><i
+                        data-lucide="trash-2"></i> Limpar Tudo</button>
+            </div>
+
+            <div class="table-container">
+                <table id="historyTable">
+                    <thead>
+                        <tr>
+                            <th>Data/Hora</th>
+                            <th>Usuário</th>
+                            <th>Ação</th>
+                            <th>Descrição</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Gerado via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        const token = localStorage.getItem('sigeti_token');
+        if (!token) window.location.href = '/';
+
+        document.getElementById('logoutBtn').addEventListener('click', () => { localStorage.clear(); window.location.href = '/'; });
+
+        function formatDate(isoString) {
+            const date = new Date(isoString);
+            return date.toLocaleString('pt-BR');
+        }
+
+        async function loadHistory() {
+            try {
+                const response = await fetch('/api/history', { headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await response.json();
+
+                const tbody = document.querySelector('#historyTable tbody');
+                tbody.innerHTML = '';
+
+                if (data.success) {
+                    data.data.forEach(log => {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td style="white-space: nowrap;">${formatDate(log.created_at)}</td>
+                                <td>${log.user_name || 'Usuário removido'}</td>
+                                <td><span class="action-badge">${log.action}</span></td>
+                                <td>${log.description}</td>
+                                <td>
+                                    <button class="btn" style="padding: 0.4rem; background: var(--danger)" onclick="deleteRecord(${log.id})"><i data-lucide="x"></i></button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    lucide.createIcons();
+                }
+            } catch (error) {
+                console.error('Erro ao carregar histórico', error);
+            }
+        }
+
+        async function deleteRecord(id) {
+            if (!confirm('Deseja excluir este registro do histórico?')) return;
+            try {
+                const response = await fetch(`/api/history/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+                if (response.ok) loadHistory();
+            } catch (error) {
+                alert('Erro ao excluir registro.');
+            }
+        }
+
+        async function clearAllHistory() {
+            if (!confirm('Tem certeza que deseja excluir TODO o histórico? Essa ação não poderá ser desfeita.')) return;
+            try {
+                const response = await fetch('/api/history', { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+                if (response.ok) loadHistory();
+            } catch (error) {
+                alert('Erro ao limpar histórico.');
+            }
+        }
+
+        loadHistory();
+    </script>
+</body>
+
+</html>

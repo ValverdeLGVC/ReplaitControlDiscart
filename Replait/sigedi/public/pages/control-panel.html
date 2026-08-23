@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Controle - SIGETI</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .grid-forms {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+        }
+
+        .admin-card {
+            background: var(--surface-color);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+        }
+
+        .admin-card h3 {
+            margin-bottom: 1.5rem;
+            color: var(--primary-color);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .allocation-list {
+            display: grid;
+            gap: 0.6rem;
+            max-height: 320px;
+            overflow-y: auto;
+            padding: 0.25rem;
+        }
+
+        .allocation-option {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 0.65rem;
+            align-items: start;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--bg-color);
+            cursor: pointer;
+        }
+
+        .allocation-option:hover {
+            border-color: var(--primary-color);
+        }
+
+        .allocation-option strong,
+        .allocation-option small {
+            display: block;
+        }
+
+        .allocation-option small {
+            color: var(--text-muted);
+            margin-top: 0.2rem;
+        }
+
+        .equipment-option {
+            display: grid;
+            grid-template-columns: 1.25rem 1fr;
+            gap: 0.65rem;
+            align-items: center;
+            min-height: 2.25rem;
+            padding: 0.45rem 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+        }
+
+        .equipment-option:last-child {
+            border-bottom: 0;
+        }
+
+        .allocation-option input,
+        .equipment-option input,
+        .allocation-toolbar input,
+        .orphan-option input {
+            width: 1rem;
+            height: 1rem;
+            margin: 0;
+        }
+
+        .allocation-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.6rem;
+        }
+
+        .allocation-toolbar label {
+            margin: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">SIGETI</div>
+            <ul class="nav-menu">
+                <li><a href="dashboard.html"><i data-lucide="layout-dashboard"></i> Dashboard</a></li>
+                <li><a href="equipments.html"><i data-lucide="monitor"></i> Equipamentos</a></li>
+                <li><a href="allocations.html"><i data-lucide="briefcase"></i> Minhas Alocações</a></li>
+                <li><a href="companies.html"><i data-lucide="building"></i> Todas Empresas</a></li>
+                <li><a href="users.html"><i data-lucide="users"></i> Usuários & Profissionais</a></li>
+                <li><a href="history.html"><i data-lucide="history"></i> Histórico</a></li>
+                <li><a href="control-panel.html" class="active"><i data-lucide="settings"></i> Painel de Controle</a>
+                </li>
+                <li><a href="#" id="logoutBtn"><i data-lucide="log-out"></i> Sair</a></li>
+            </ul>
+        </aside>
+
+        <main class="main-content">
+            <h2 style="margin-bottom: 2rem;">Painel de Controle Administrativo</h2>
+
+            <div class="grid-forms">
+                <!-- 1. Nova Empresa -->
+                <div class="admin-card">
+                    <h3><i data-lucide="building"></i> Cadastrar Nova Empresa</h3>
+                    <form id="formCompany">
+                        <div class="form-group">
+                            <label>Nome da Empresa</label>
+                            <input type="text" id="compName" required placeholder="Ex: Empresa Cliente Alpha">
+                        </div>
+                        <div class="form-group">
+                            <label>CNPJ</label>
+                            <input type="text" id="compCnpj" placeholder="00.000.000/0001-00">
+                        </div>
+                        <div class="form-group">
+                            <label>Tipo de Empresa</label>
+                            <select id="compType" required>
+                                <option value="CLIENT">Cliente (Onde ficam os equipamentos)</option>
+                                <option value="PROVIDER">Prestadora (Sua empresa/Técnicos)</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn" style="width: 100%;">Salvar Empresa</button>
+                    </form>
+                </div>
+
+                <!-- 2. Novo Usuário / Profissional -->
+                <div class="admin-card">
+                    <h3><i data-lucide="user-plus"></i> Cadastrar Novo Usuário / Profissional</h3>
+                    <form id="formUser">
+                        <div class="form-group">
+                            <label>Nome Completo</label>
+                            <input type="text" id="userName" required placeholder="Ex: João da Silva">
+                        </div>
+                        <div class="form-group">
+                            <label>E-mail (Login)</label>
+                            <input type="email" id="userEmail" required placeholder="joao@sigeti.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Senha Inicial</label>
+                            <input type="password" id="userPassword" required placeholder="******">
+                        </div>
+                        <div class="form-group">
+                            <label>Função / Perfil</label>
+                            <select id="userRole" required>
+                                <option value="USER">Usuário / Técnico</option>
+                                <option value="ADMIN">Administrador</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Empresa Prestadora Vinculada</label>
+                            <select id="userProvider" required>
+                                <option value="">Carregando prestadoras...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Telefone</label>
+                            <input type="text" id="userPhone" placeholder="(62) 99999-9999">
+                        </div>
+                        <button type="submit" class="btn" style="width: 100%;">Cadastrar Profissional</button>
+                    </form>
+                </div>
+
+                <!-- 3. Nova Alocação -->
+                <div class="admin-card">
+                    <h3><i data-lucide="link"></i> Alocar Profissional em Empresa</h3>
+                    <form id="formAllocation">
+                        <div class="form-group">
+                            <label>Profissional</label>
+                            <select id="allocProf" required>
+                                <option value="">Carregando profissionais...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Empresa Cliente</label>
+                            <select id="allocComp" required>
+                                <option value="">Carregando empresas...</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn" style="width: 100%;">Confirmar Alocação</button>
+                    </form>
+                </div>
+
+                <div class="admin-card">
+                    <h3><i data-lucide="unlink"></i> Desalocar Colaborador</h3>
+                    <form id="formRemoveAllocation">
+                        <div class="form-group">
+                            <label>Selecione os vínculos que deseja encerrar</label>
+                            <div class="allocation-toolbar">
+                                <small style="color: var(--text-muted);">Cada linha representa uma empresa cliente.</small>
+                                <label><input type="checkbox" id="removeAllAllocations"> Todos</label>
+                            </div>
+                            <div id="allocationList" class="allocation-list">
+                                <span style="color: var(--text-muted);">Carregando alocações...</span>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn" style="width: 100%; background: var(--danger);">Encerrar vínculos selecionados</button>
+                    </form>
+                </div>
+
+                <div class="admin-card">
+                    <h3><i data-lucide="building-2"></i> Desvincular da Prestadora</h3>
+                    <form id="formRemoveProvider">
+                        <div class="form-group">
+                            <label>Selecione os profissionais e suas prestadoras</label>
+                            <div class="allocation-toolbar">
+                                <small style="color: var(--text-muted);">Isso remove somente o vínculo com a prestadora.</small>
+                                <label><input type="checkbox" id="removeAllProviders"> Todos</label>
+                            </div>
+                            <div id="providerList" class="allocation-list">
+                                <span style="color: var(--text-muted);">Carregando prestadoras...</span>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn" style="width: 100%; background: var(--danger);">Desvincular da prestadora</button>
+                    </form>
+                </div>
+
+                <div class="admin-card">
+                    <h3><i data-lucide="package-minus"></i> Desalocar Material</h3>
+                    <form id="formRemoveEquipment">
+                        <div class="form-group">
+                            <label>Selecione os equipamentos</label>
+                            <div id="equipmentAllocationList" class="allocation-list" style="border: 1px solid var(--border-color); padding: 0.75rem;">
+                                <span style="color: var(--text-muted);">Carregando equipamentos...</span>
+                            </div>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.75rem;">
+                                <input type="checkbox" id="removeAllEquipment">
+                                Desalocar todos os equipamentos
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
+                                <input type="checkbox" id="leaveEquipmentOrphan" checked>
+                                Deixar o equipamento órfão, sem empresa vinculada
+                            </label>
+                        </div>
+                        <button type="submit" class="btn" style="width: 100%; background: var(--danger);">Desalocar Material</button>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        const token = localStorage.getItem('sigeti_token');
+        if (!token) window.location.href = '/';
+        document.getElementById('logoutBtn').addEventListener('click', () => { localStorage.clear(); window.location.href = '/'; });
+
+        async function loadSelects() {
+            try {
+                // Carregar Empresas (Clientes e Prestadoras)
+                const compRes = await fetch('/api/companies', { headers: { 'Authorization': `Bearer ${token}` } });
+                const compData = await compRes.json();
+
+                const compSelect = document.getElementById('allocComp');
+                const providerSelect = document.getElementById('userProvider');
+
+                compSelect.innerHTML = '<option value="">Selecione a empresa cliente...</option>';
+                providerSelect.innerHTML = '<option value="">Selecione a empresa prestadora...</option>';
+
+                if (compData.success) {
+                    compData.data.forEach(c => {
+                        if (c.type === 'CLIENT') {
+                            compSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+                        }
+                        if (c.type === 'PROVIDER') {
+                            providerSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+                        }
+                    });
+                }
+
+                // Carregar Profissionais
+                const profRes = await fetch('/api/professionals', { headers: { 'Authorization': `Bearer ${token}` } });
+                const profData = await profRes.json();
+                const profSelect = document.getElementById('allocProf');
+                profSelect.innerHTML = '<option value="">Selecione o profissional...</option>';
+                if (profData.success) {
+                    profData.data.forEach(p => {
+                        profSelect.innerHTML += `<option value="${p.professional_id}">${p.name} (${p.provider})</option>`;
+                    });
+                }
+
+                const providerList = document.getElementById('providerList');
+                providerList.innerHTML = '';
+                if (profData.success) {
+                    profData.data.filter(p => p.provider_id).forEach(p => {
+                        providerList.innerHTML += `
+                            <label class="allocation-option">
+                                <input type="checkbox" class="provider-to-remove" value="${p.professional_id}">
+                                <span>
+                                    <strong>${p.name} (ID colaborador: ${p.user_id})</strong>
+                                    <small>Prestadora: ${p.provider} (ID: ${p.provider_id})</small>
+                                </span>
+                            </label>`;
+                    });
+                }
+                if (!providerList.innerHTML) providerList.innerHTML = '<span style="color: var(--text-muted);">Nenhum profissional vinculado a prestadora.</span>';
+
+                const allocationRes = await fetch('/api/allocations/people', { headers: { 'Authorization': `Bearer ${token}` } });
+                const allocationData = await allocationRes.json();
+                const allocationList = document.getElementById('allocationList');
+                allocationList.innerHTML = '';
+                if (allocationData.success) {
+                    allocationData.data.forEach(a => {
+                        allocationList.innerHTML += `
+                            <label class="allocation-option">
+                                <input type="checkbox" class="allocation-to-remove" value="${a.id}">
+                                <span>
+                                    <strong>${a.professional_name} (ID colaborador: ${a.collaborator_id})</strong>
+                                    <small>Prestadora: ${a.provider_company_name || 'Não informada'} (ID: ${a.provider_company_id || '-'})</small>
+                                    <small>Empresa cliente: ${a.company_name || 'Não informada'} (ID: ${a.company_id || '-'})</small>
+                                </span>
+                            </label>`;
+                    });
+                }
+                if (!allocationList.innerHTML) allocationList.innerHTML = '<span style="color: var(--text-muted);">Nenhum vínculo ativo encontrado.</span>';
+
+                const equipmentRes = await fetch('/api/allocations', { headers: { 'Authorization': `Bearer ${token}` } });
+                const equipmentData = await equipmentRes.json();
+                const equipmentList = document.getElementById('equipmentAllocationList');
+                equipmentList.innerHTML = '';
+                if (equipmentData.success && equipmentData.equipment) {
+                    equipmentData.equipment.forEach(e => {
+                        equipmentList.innerHTML += `
+                            <label class="equipment-option">
+                                <input type="checkbox" class="equipment-to-remove" value="${e.id}">
+                                <span><strong>${e.id}</strong> - ${e.equipment_name} / ${e.company_name}</span>
+                            </label>`;
+                    });
+                }
+                if (!equipmentList.innerHTML) equipmentList.innerHTML = '<span style="color: var(--text-muted);">Nenhum equipamento alocado.</span>';
+                lucide.createIcons();
+            } catch (error) {
+                console.error('Erro ao carregar dados dos selects', error);
+            }
+        }
+
+        // 1. Enviar Cadastro de Empresa
+        document.getElementById('formCompany').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                name: document.getElementById('compName').value,
+                cnpj: document.getElementById('compCnpj').value,
+                type: document.getElementById('compType').value
+            };
+            const res = await fetch('/api/companies', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
+            const data = await res.json();
+            alert(data.message);
+            if (data.success) { e.target.reset(); loadSelects(); }
+        });
+
+        // 2. Enviar Cadastro de Usuário/Profissional
+        document.getElementById('formUser').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                name: document.getElementById('userName').value,
+                email: document.getElementById('userEmail').value,
+                password: document.getElementById('userPassword').value,
+                role: document.getElementById('userRole').value,
+                provider_company_id: document.getElementById('userProvider').value,
+                phone: document.getElementById('userPhone').value
+            };
+            const res = await fetch('/api/users', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
+            const data = await res.json();
+            alert(data.message);
+            if (data.success) { e.target.reset(); loadSelects(); }
+        });
+
+        // 3. Enviar Alocação
+        document.getElementById('formAllocation').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                professional_id: document.getElementById('allocProf').value,
+                client_company_id: document.getElementById('allocComp').value
+            };
+            const res = await fetch('/api/allocations', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
+            const data = await res.json();
+            alert(data.message);
+            if (data.success) e.target.reset();
+        });
+
+        document.getElementById('formRemoveAllocation').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const removeAll = document.getElementById('removeAllAllocations').checked;
+            const allocationIds = [...document.querySelectorAll('.allocation-to-remove:checked')].map(input => Number(input.value));
+            if (!removeAll && allocationIds.length === 0) {
+                alert('Selecione os vínculos que deseja encerrar ou marque "Todos".');
+                return;
+            }
+            if (!confirm(removeAll ? 'Deseja realmente encerrar todos os vínculos ativos?' : `Deseja realmente encerrar ${allocationIds.length} vínculo(s) selecionado(s)?`)) return;
+            const res = await fetch('/api/allocations/remove', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ all: removeAll, allocation_ids: allocationIds })
+            });
+            const data = await res.json();
+            alert(data.message);
+            if (data.success) { e.target.reset(); loadSelects(); }
+        });
+
+        document.getElementById('formRemoveProvider').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const removeAll = document.getElementById('removeAllProviders').checked;
+            const professionalIds = [...document.querySelectorAll('.provider-to-remove:checked')].map(input => Number(input.value));
+            if (!removeAll && professionalIds.length === 0) {
+                alert('Selecione os profissionais que deseja desvincular ou marque "Todos".');
+                return;
+            }
+            if (!confirm(removeAll ? 'Deseja realmente desvincular todos os profissionais das prestadoras?' : `Deseja realmente desvincular ${professionalIds.length} profissional(is) das prestadoras?`)) return;
+            const res = await fetch('/api/professionals/unlink-company', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ all: removeAll, professional_ids: professionalIds })
+            });
+            const data = await res.json();
+            alert(data.message);
+            if (data.success) { e.target.reset(); loadSelects(); }
+        });
+
+        document.getElementById('formRemoveEquipment').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const removeAll = document.getElementById('removeAllEquipment').checked;
+            const equipmentIds = [...document.querySelectorAll('.equipment-to-remove:checked')].map(input => Number(input.value));
+            if (!removeAll && equipmentIds.length === 0) {
+                alert('Selecione os equipamentos que deseja desalocar ou marque "Desalocar todos os equipamentos".');
+                return;
+            }
+            if (!confirm(removeAll ? 'Deseja realmente desalocar todos os equipamentos?' : `Deseja realmente desalocar ${equipmentIds.length} equipamento(s) selecionado(s)?`)) return;
+            const res = await fetch('/api/equipment/unallocate', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ all: removeAll, equipment_ids: equipmentIds, orphan: document.getElementById('leaveEquipmentOrphan').checked })
+            });
+            const data = await res.json();
+            alert(data.message);
+            if (data.success) { e.target.reset(); loadSelects(); }
+        });
+
+        document.getElementById('removeAllAllocations').addEventListener('change', (event) => {
+            document.querySelectorAll('.allocation-to-remove').forEach(input => { input.checked = event.target.checked; });
+        });
+
+        document.getElementById('removeAllProviders').addEventListener('change', (event) => {
+            document.querySelectorAll('.provider-to-remove').forEach(input => { input.checked = event.target.checked; });
+        });
+
+        document.getElementById('removeAllEquipment').addEventListener('change', (event) => {
+            document.querySelectorAll('.equipment-to-remove').forEach(input => { input.checked = event.target.checked; });
+        });
+
+        loadSelects();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - SIGETI</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <!-- Ícones Lucide -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .stat-card {
+            background: var(--surface-color);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-color);
+        }
+
+        .stat-card h3 {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        /* Ajuste Mobile para Sidebar */
+        @media (max-width: 768px) {
+            .app-container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+            }
+
+            .nav-menu {
+                display: flex;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+
+            .nav-menu li a {
+                margin-right: 1rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Menu Lateral -->
+        <aside class="sidebar">
+            <div class="sidebar-header">SIGETI</div>
+            <ul class="nav-menu">
+                <li><a href="dashboard.html"><i data-lucide="layout-dashboard"></i> Dashboard</a></li>
+                <li><a href="equipments.html"><i data-lucide="monitor"></i> Equipamentos</a></li>
+                <li><a href="allocations.html"><i data-lucide="briefcase"></i> Minhas Alocações</a></li>
+                <li><a href="companies.html"><i data-lucide="building"></i> Todas Empresas</a></li>
+                <li><a href="users.html"><i data-lucide="users"></i> Usuários & Profissionais</a></li>
+                <li><a href="history.html"><i data-lucide="history"></i> Histórico</a></li>
+                <li><a href="control-panel.html"><i data-lucide="settings"></i> Painel de Controle</a></li>
+                <li><a href="#" id="logoutBtn"><i data-lucide="log-out"></i> Sair</a></li>
+            </ul>
+        </aside>
+
+        <!-- Conteúdo Principal -->
+        <main class="main-content">
+            <header>
+                <h2>Visão Geral do Estoque</h2>
+                <p>Bem-vindo, <span id="userName">Usuário</span>.</p>
+            </header>
+
+            <div class="dashboard-grid">
+                <div class="stat-card">
+                    <h3>Total de Equipamentos</h3>
+                    <div class="value" id="stat-total">0</div>
+                </div>
+                <div class="stat-card" style="border-left: 4px solid var(--success);">
+                    <h3>Funcionando</h3>
+                    <div class="value" id="stat-working">0</div>
+                </div>
+                <div class="stat-card" style="border-left: 4px solid var(--danger);">
+                    <h3>Descartados</h3>
+                    <div class="value" id="stat-broken">0</div>
+                </div>
+                <div class="stat-card" style="border-left: 4px solid var(--warning);">
+                    <h3>Aguardando Avaliação</h3>
+                    <div class="value" id="stat-pending">0</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Inicializar ícones
+        lucide.createIcons();
+
+        // Verificação de Autenticação
+        const token = localStorage.getItem('sigeti_token');
+        if (!token) {
+            window.location.href = '/';
+        }
+
+        // Mostrar nome do usuário
+        let user = null;
+        try {
+            user = JSON.parse(localStorage.getItem('sigeti_user') || 'null');
+        } catch (error) {
+            localStorage.removeItem('sigeti_user');
+        }
+        if (user) document.getElementById('userName').textContent = user.name;
+
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            localStorage.clear();
+            window.location.href = '/';
+        });
+
+        // Buscar dados reais do Banco para o Dashboard
+        async function loadDashboard() {
+            try {
+                const response = await fetch('/api/dashboard', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('stat-total').textContent = data.data.total || 0;
+                    document.getElementById('stat-working').textContent = data.data.funcionando || 0;
+                    document.getElementById('stat-broken').textContent = data.data.danificados || 0;
+                    document.getElementById('stat-pending').textContent = data.data.aguardando_avaliacao || 0;
+                }
+            } catch (error) {
+                console.error('Erro ao carregar dashboard', error);
+            }
+        }
+
+        loadDashboard();
+    </script>
+</body>
+
+</html>
