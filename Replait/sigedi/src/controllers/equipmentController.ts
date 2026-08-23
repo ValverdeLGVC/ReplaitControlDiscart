@@ -28,7 +28,8 @@ export const getEquipments = async (req: AuthRequest, res: Response): Promise<vo
 };
 
 export const createEquipment = async (req: AuthRequest, res: Response): Promise<void> => {
-    const { patrimony_code, name, category_id, manufacturer, model, serial_number, client_company_id, status, location, observations } = req.body;
+    const { name, category_id, manufacturer, model, serial_number, client_company_id, status, location, observations } = req.body;
+    const patrimonyCode = String(req.body.patrimony_code ?? req.body.patrimony ?? '').trim() || null;
     const userId = req.user?.id;
 
     if (!userId) { res.status(401).json({ success: false, message: 'Não autorizado' }); return; }
@@ -46,7 +47,7 @@ export const createEquipment = async (req: AuthRequest, res: Response): Promise<
                 status, is_working, location, client_company_id, observations, created_by_user_id
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
-                patrimony_code || null,
+                patrimonyCode,
                 name,
                 category_id || 1, 
                 manufacturer || null,

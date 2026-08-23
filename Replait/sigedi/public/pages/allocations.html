@@ -69,6 +69,7 @@
                 <li><a href="equipments.html"><i data-lucide="monitor"></i> Equipamentos</a></li>
                 <li><a href="allocations.html" class="active"><i data-lucide="briefcase"></i> Alocações Ativas</a></li>
                 <li><a href="companies.html"><i data-lucide="building"></i> Todas Empresas</a></li>
+                <li><a href="users.html"><i data-lucide="users"></i> Usuários & Profissionais</a></li>
                 <li><a href="history.html"><i data-lucide="history"></i> Histórico</a></li>
                 <li><a href="control-panel.html"><i data-lucide="settings"></i> Painel de Controle</a></li>
                 <li><a href="#" id="logoutBtn"><i data-lucide="log-out"></i> Sair</a></li>
@@ -181,7 +182,10 @@
                                 <td>${equipment.serial_number || '-'}</td>
                                 <td><span style="color: var(--primary-color); font-weight: 600;">${equipment.company_name}</span></td>
                                 <td><span class="badge-active">${equipment.status || 'Ativo'}</span></td>
-                                <td><button class="decision-action" onclick="toggleEquipmentDetails(event, ${equipment.id})">${waitingDisposal ? 'Clique para decidir' : 'Clique para ver detalhes'}</button></td>
+                                <td>
+                                    <button class="decision-action" onclick="toggleEquipmentDetails(event, ${equipment.id})">${waitingDisposal ? 'Clique para decidir' : 'Clique para ver detalhes'}</button>
+                                    ${equipment.disposal_status === 'Autorizado' ? `<button class="btn" style="margin-left: 0.5rem; padding: 0.3rem 0.6rem; background: var(--danger); font-size: 0.75rem;" onclick="eliminateDiscardedEquipment(event, ${equipment.id}, '${encodeURIComponent(equipment.equipment_name)}')">Eliminar</button>` : ''}
+                                </td>
                             </tr>
                             <tr id="equipment-details-${equipment.id}" class="equipment-details" hidden>
                                 <td colspan="7">
@@ -270,6 +274,35 @@
             const result = await res.json();
             alert(`${result.message}${result.success && user.name ? `\nResponsável: ${user.name}` : ''}`);
             if (result.success) loadAllocations();
+        }
+
+        async function eliminateDiscardedEquipment(event, equipmentId, encodedName) {
+            event.stopPropagation();
+            const name = decodeURIComponent(encodedName);
+            if (!confirm(`Deseja eliminar definitivamente o equipamento "${name}"?`)) return;
+
+            try {
+                const unallocateRes = await fetch(`/api/equipment/${equipmentId}/unallocate`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const unallocateData = await unallocateRes.json();
+                if (!unallocateRes.ok || !unallocateData.success) {
+                    alert(unallocateData.message || 'Não foi possível deixar o equipamento órfão.');
+                    return;
+                }
+
+                const deleteRes = await fetch(`/api/equipment/${equipmentId}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ delete_history: false })
+                });
+                const deleteData = await deleteRes.json();
+                alert(deleteData.message);
+                if (deleteData.success) loadAllocations();
+            } catch (error) {
+                alert('Erro ao eliminar equipamento descartado.');
+            }
         }
 
         document.getElementById('searchAlloc').addEventListener('input', (e) => {

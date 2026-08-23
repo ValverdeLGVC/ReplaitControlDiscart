@@ -210,6 +210,10 @@
                                     <button class="btn" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; background: var(--success);" onclick="decideDisposal(${r.id}, ${r.equipment_id}, 'Autorizado')">Autorizar</button>
                                     <button class="btn" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; background: var(--danger);" onclick="decideDisposal(${r.id}, ${r.equipment_id}, 'Negado')">Negar</button>
                                 </div>
+                                ` : r.status === 'Autorizado' ? `
+                                <div style="margin-top: 0.75rem;">
+                                    <button class="btn" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; background: var(--danger);" onclick="eliminateDiscardedEquipment(${r.equipment_id}, '${encodeURIComponent(r.equipment)}')">Eliminar</button>
+                                </div>
                                 ` : ''}
                             </div>
                         `;
@@ -240,6 +244,34 @@
                 }
             } catch (error) {
                 alert('Erro ao processar decisão.');
+            }
+        }
+
+        async function eliminateDiscardedEquipment(equipmentId, encodedName) {
+            const name = decodeURIComponent(encodedName);
+            if (!confirm(`Deseja eliminar definitivamente o equipamento "${name}"?`)) return;
+
+            try {
+                const unallocateRes = await fetch(`/api/equipment/${equipmentId}/unallocate`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const unallocateData = await unallocateRes.json();
+                if (!unallocateRes.ok || !unallocateData.success) {
+                    alert(unallocateData.message || 'Não foi possível deixar o equipamento órfão.');
+                    return;
+                }
+
+                const deleteRes = await fetch(`/api/equipment/${equipmentId}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ delete_history: false })
+                });
+                const deleteData = await deleteRes.json();
+                alert(deleteData.message);
+                if (deleteData.success) loadCompanyDetails();
+            } catch (error) {
+                alert('Erro ao eliminar equipamento descartado.');
             }
         }
 

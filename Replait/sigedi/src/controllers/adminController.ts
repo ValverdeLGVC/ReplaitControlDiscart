@@ -228,8 +228,7 @@ export const getActiveAllocations = async (req: AuthRequest, res: Response): Pro
             )
             LEFT JOIN users u_req ON d.requested_by_user_id = u_req.id
             LEFT JOIN users u_dec ON d.decided_by_user_id = u_dec.id
-            WHERE e.client_company_id IS NOT NULL
-              AND (e.status IS NULL OR e.status <> 'Descartado')
+                        WHERE e.client_company_id IS NOT NULL
             ORDER BY c.name ASC, e.id DESC
         `);
         res.json({ success: true, data: allocations, equipment: equipmentAllocations });
@@ -457,11 +456,6 @@ export const removeEquipmentAllocation = async (req: AuthRequest, res: Response)
             res.status(404).json({ success: false, message: 'Equipamento não encontrado.' });
             return;
         }
-        if (!equipmentRows[0].client_company_id) {
-            res.status(400).json({ success: false, message: 'Este equipamento não está alocado a uma empresa.' });
-            return;
-        }
-
         await pool.execute(
             "UPDATE equipment SET client_company_id = NULL, status = CASE WHEN status = 'Descartado' THEN status ELSE 'Funcionando' END WHERE id = ?",
             [id]
@@ -480,7 +474,9 @@ export const removeEquipmentAllocations = async (req: AuthRequest, res: Response
     if (!userId) { res.status(401).json({ success: false, message: 'Não autorizado' }); return; }
 
     try {
-        let query = 'SELECT id FROM equipment WHERE client_company_id IS NOT NULL';
+        let query = all
+            ? 'SELECT id FROM equipment'
+            : 'SELECT id FROM equipment WHERE client_company_id IS NOT NULL';
         let params: any[] = [];
         if (!all) {
             if (!Array.isArray(equipment_ids) || equipment_ids.length === 0) {
