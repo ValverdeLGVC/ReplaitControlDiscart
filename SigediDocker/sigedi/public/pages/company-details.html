@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visão Geral da Empresa - SIGETI</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--surface-color);
+            padding: 1rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+        }
+
+        .stat-card h3 {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .stat-card .value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .split-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .split-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .list-card {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+        }
+
+        .list-card h3 {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .list-item {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--bg-color);
+        }
+
+        .list-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">SIGETI</div>
+            <ul class="nav-menu">
+                <li><a href="dashboard.html"><i data-lucide="layout-dashboard"></i> Dashboard</a></li>
+                <li><a href="equipments.html"><i data-lucide="monitor"></i> Equipamentos</a></li>
+                <li><a href="allocations.html"><i data-lucide="briefcase"></i> Minhas Alocações</a></li>
+                <li><a href="companies.html"><i data-lucide="building"></i> Todas Empresas</a></li>
+                <li><a href="users.html"><i data-lucide="users"></i> Usuários & Profissionais</a></li>
+                <li><a href="history.html"><i data-lucide="history"></i> Histórico</a></li>
+                <li><a href="control-panel.html"><i data-lucide="settings"></i> Painel de Controle</a></li>
+                <li><a href="#" id="logoutBtn"><i data-lucide="log-out"></i> Sair</a></li>
+            </ul>
+        </aside>
+
+        <main class="main-content">
+            <header
+                style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                    <h2 id="companyName">Carregando...</h2>
+                    <p id="companyCnpj" style="color: var(--text-muted);"></p>
+                </div>
+                <a href="companies.html" class="btn" style="background: var(--text-muted);">
+                    <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i> Voltar para Empresas
+                </a>
+            </header>
+
+            <div class="dashboard-grid">
+                <div class="stat-card">
+                    <h3>Total de Equipamentos</h3>
+                    <div class="value" id="stat-total">0</div>
+                </div>
+                <div class="stat-card" style="border-left: 4px solid var(--success);">
+                    <h3>Funcionando</h3>
+                    <div class="value" id="stat-working">0</div>
+                </div>
+                <div class="stat-card" style="border-left: 4px solid var(--danger);">
+                    <h3>Danificados</h3>
+                    <div class="value" id="stat-broken">0</div>
+                </div>
+                <div class="stat-card" style="border-left: 4px solid var(--warning);">
+                    <h3>Aguardando Descarte</h3>
+                    <div class="value" id="stat-disposal">0</div>
+                </div>
+            </div>
+
+            <div class="split-grid">
+                <!-- Alocações -->
+                <div class="list-card">
+                    <h3><i data-lucide="users" style="vertical-align: middle;"></i> Profissionais Alocados Aqui</h3>
+                    <div id="allocationsList"></div>
+                </div>
+
+                <!-- Solicitações de Descarte -->
+                <div class="list-card">
+                    <h3><i data-lucide="alert-circle" style="vertical-align: middle;"></i> Solicitações de Descarte</h3>
+                    <div id="requestsList"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        const token = localStorage.getItem('sigeti_token');
+        if (!token) window.location.href = '/';
+
+        document.getElementById('logoutBtn').addEventListener('click', () => { localStorage.clear(); window.location.href = '/'; });
+
+        // Pega o ID da empresa pela URL (?id=1)
+        const urlParams = new URLSearchParams(window.location.search);
+        const companyId = urlParams.get('id');
+
+        async function loadCompanyDetails() {
+            if (!companyId) {
+                alert('Empresa não selecionada');
+                window.location.href = 'companies.html';
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/companies/${companyId}/overview`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await res.json();
+
+                if (data.success) {
+                    // Cabeçalho e Estatísticas
+                    document.getElementById('companyName').textContent = data.data.company.name;
+                    document.getElementById('companyCnpj').textContent = `CNPJ: ${data.data.company.cnpj || 'N/A'}`;
+
+                    document.getElementById('stat-total').textContent = data.data.stats.total || 0;
+                    document.getElementById('stat-working').textContent = data.data.stats.funcionando || 0;
+                    document.getElementById('stat-broken').textContent = data.data.stats.danificados || 0;
+                    document.getElementById('stat-disposal').textContent = data.data.stats.aguardando_descarte || 0;
+
+                    // Lista de Alocações
+                    const allocDiv = document.getElementById('allocationsList');
+                    allocDiv.innerHTML = data.data.allocations.length === 0 ? '<p style="color: var(--text-muted); font-size: 0.9rem;">Nenhum profissional alocado no momento.</p>' : '';
+                    data.data.allocations.forEach(a => {
+                        const date = new Date(a.start_date).toLocaleDateString('pt-BR');
+                        allocDiv.innerHTML += `
+                            <div class="list-item">
+                                <strong>${a.professional_name}</strong><br>
+                                <small style="color: var(--text-muted);">Alocado por: <strong>${a.allocated_by}</strong> em ${date}</small>
+                            </div>
+                        `;
+                    });
+
+                    // Lista de Solicitações de Descarte
+                    const reqDiv = document.getElementById('requestsList');
+                    reqDiv.innerHTML = data.data.requests.length === 0 ? '<p style="color: var(--text-muted); font-size: 0.9rem;">Nenhuma solicitação de descarte registrada.</p>' : '';
+
+                    data.data.requests.forEach(r => {
+                        let decisionInfo = '';
+                        let statusColor = 'var(--warning)';
+                        const requestDate = r.request_date ? new Date(r.request_date).toLocaleString('pt-BR') : 'Data não informada';
+                        const decisionDate = r.decision_date ? new Date(r.decision_date).toLocaleString('pt-BR') : '';
+
+                        if (r.status === 'Autorizado') statusColor = 'var(--success)';
+                        if (r.status === 'Negado') statusColor = 'var(--danger)';
+
+                        if (r.status !== 'Pendente') {
+                            decisionInfo = `
+                                <br><small style="color: var(--text-muted);">Decisão: <strong>${r.status}</strong></small>
+                                <br><small style="color: var(--text-muted);">Autorizado por: <strong>${r.decided_by || 'Não informado'}</strong> em <strong>${decisionDate || 'Data não informada'}</strong></small>
+                                <br><small style="color: var(--text-muted);">Motivo da decisão: ${r.decision_notes || 'Não informado'}</small>
+                            `;
+                        }
+
+                        reqDiv.innerHTML += `
+                            <div class="list-item">
+                                <strong>${r.equipment}</strong> - <span style="color: ${statusColor}; font-size: 0.8rem; font-weight: 600;">${r.status}</span><br>
+                            <small>O quê: ${r.equipment}</small><br>
+                            <small>Motivo da solicitação: ${r.reason}</small><br>
+                            <small style="color: var(--text-muted);">Solicitado por: <strong>${r.requested_by}</strong> em <strong>${requestDate}</strong></small>
+                                ${decisionInfo}
+                                ${r.status === 'Pendente' ? `
+                                <div style="margin-top: 0.75rem; display: flex; gap: 0.5rem;">
+                                    <button class="btn" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; background: var(--success);" onclick="decideDisposal(${r.id}, ${r.equipment_id}, 'Autorizado')">Autorizar</button>
+                                    <button class="btn" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; background: var(--danger);" onclick="decideDisposal(${r.id}, ${r.equipment_id}, 'Negado')">Negar</button>
+                                </div>
+                                ` : r.status === 'Autorizado' ? `
+                                <div style="margin-top: 0.75rem;">
+                                    <button class="btn" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; background: var(--danger);" onclick="eliminateDiscardedEquipment(${r.equipment_id}, '${encodeURIComponent(r.equipment)}')">Eliminar</button>
+                                </div>
+                                ` : ''}
+                            </div>
+                        `;
+                    });
+                    lucide.createIcons();
+                }
+            } catch (error) {
+                console.error('Erro ao carregar detalhes da empresa:', error);
+            }
+        }
+
+        // Função para Aprovar ou Negar o Descarte
+        async function decideDisposal(requestId, equipmentId, decision) {
+            const notes = prompt(`Motivo para ${decision === 'Autorizado' ? 'autorizar' : 'negar'} o descarte:`);
+            if (notes === null) return;
+
+            try {
+                const res = await fetch('/api/descarte/decidir', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ request_id: requestId, equipment_id: equipmentId, status: decision, decision_notes: notes })
+                });
+
+                const data = await res.json();
+                alert(data.message);
+                if (data.success) {
+                    loadCompanyDetails();
+                }
+            } catch (error) {
+                alert('Erro ao processar decisão.');
+            }
+        }
+
+        async function eliminateDiscardedEquipment(equipmentId, encodedName) {
+            const name = decodeURIComponent(encodedName);
+            if (!confirm(`Deseja eliminar definitivamente o equipamento "${name}"?`)) return;
+
+            try {
+                const unallocateRes = await fetch(`/api/equipment/${equipmentId}/unallocate`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const unallocateData = await unallocateRes.json();
+                if (!unallocateRes.ok || !unallocateData.success) {
+                    alert(unallocateData.message || 'Não foi possível deixar o equipamento órfão.');
+                    return;
+                }
+
+                const deleteRes = await fetch(`/api/equipment/${equipmentId}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ delete_history: false })
+                });
+                const deleteData = await deleteRes.json();
+                alert(deleteData.message);
+                if (deleteData.success) loadCompanyDetails();
+            } catch (error) {
+                alert('Erro ao eliminar equipamento descartado.');
+            }
+        }
+
+        loadCompanyDetails();
+    </script>
+</body>
+
+</html>

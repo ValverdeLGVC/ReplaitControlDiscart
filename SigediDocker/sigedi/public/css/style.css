@@ -1,0 +1,193 @@
+:root {
+    --bg-color: #f4f7fa;
+    --surface-color: #ffffff;
+    --primary-color: #2563eb;
+    --primary-hover: #1d4ed8;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --border-color: #e2e8f0;
+
+    --success: #10b981;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --info: #3b82f6;
+
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --radius: 8px;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Formulários e Elementos Base */
+input,
+select,
+textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    background: var(--surface-color);
+    color: var(--text-main);
+    outline: none;
+    font-size: 0.95rem;
+    transition: border-color 0.2s;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    border-color: var(--primary-color);
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    white-space: nowrap;
+}
+
+.btn:hover {
+    background-color: var(--primary-hover);
+}
+
+/* Layout Responsivo Principal (Sidebar + Conteúdo) */
+.app-container {
+    display: flex;
+    min-height: 100vh;
+    width: 100%;
+    overflow-x: hidden;
+}
+
+.sidebar {
+    width: 260px;
+    background: var(--surface-color);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+
+.sidebar-header {
+    padding: 1.5rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.nav-menu {
+    list-style: none;
+    padding: 1rem;
+}
+
+.nav-menu li a {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    border-radius: var(--radius);
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.nav-menu li a:hover,
+.nav-menu li a.active {
+    background: var(--bg-color);
+    color: var(--primary-color);
+}
+
+.main-content {
+    flex: 1;
+    padding: 2rem;
+    width: calc(100% - 260px);
+    overflow-y: auto;
+}
+
+/* Tabelas com Scroll Horizontal Seguro no Mobile */
+.table-container {
+    background: var(--surface-color);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-top: 1rem;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    min-width: 600px;
+    /* Garante que elementos internos não espremem demais */
+}
+
+th,
+td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9rem;
+}
+
+th {
+    background-color: var(--bg-color);
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+/* Ajustes de Responsividade para Dispositivos Móveis (Tablets e Celulares) */
+@media (max-width: 768px) {
+    .app-container {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .nav-menu {
+        display: flex;
+        overflow-x: auto;
+        white-space: nowrap;
+        padding: 0.75rem;
+        gap: 0.5rem;
+    }
+
+    .nav-menu li a {
+        margin-bottom: 0;
+        padding: 0.5rem 0.75rem;
+    }
+
+    .main-content {
+        width: 100%;
+        padding: 1rem;
+    }
+}

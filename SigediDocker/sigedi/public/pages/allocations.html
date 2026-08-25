@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alocações Ativas - SIGETI</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .table-container {
+            background: var(--surface-color);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-color);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th,
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.9rem;
+        }
+
+        th {
+            background-color: var(--bg-color);
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .badge-active {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .equipment-row { cursor: pointer; }
+        .equipment-details { background: var(--bg-color); }
+        .equipment-details td { padding: 0.75rem 1rem; }
+        .decision-action { color: var(--primary-color); background: none; border: 0; cursor: pointer; font: inherit; font-weight: 600; padding: 0; text-decoration: underline; }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">SIGETI</div>
+            <ul class="nav-menu">
+                <li><a href="dashboard.html"><i data-lucide="layout-dashboard"></i> Dashboard</a></li>
+                <li><a href="equipments.html"><i data-lucide="monitor"></i> Equipamentos</a></li>
+                <li><a href="allocations.html" class="active"><i data-lucide="briefcase"></i> Alocações Ativas</a></li>
+                <li><a href="companies.html"><i data-lucide="building"></i> Todas Empresas</a></li>
+                <li><a href="users.html"><i data-lucide="users"></i> Usuários & Profissionais</a></li>
+                <li><a href="history.html"><i data-lucide="history"></i> Histórico</a></li>
+                <li><a href="control-panel.html"><i data-lucide="settings"></i> Painel de Controle</a></li>
+                <li><a href="#" id="logoutBtn"><i data-lucide="log-out"></i> Sair</a></li>
+            </ul>
+        </aside>
+
+        <main class="main-content">
+            <div class="header-actions">
+                <h2>Painel de Alocações Ativas</h2>
+                <input type="text" id="searchAlloc" placeholder="Filtrar alocações..." style="width: 300px;">
+            </div>
+
+            <div class="table-container">
+                <table id="allocationsTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>ID Colaborador</th>
+                            <th>Profissional</th>
+                            <th>Prestadora</th>
+                            <th>ID Empresa</th>
+                            <th>Empresa Cliente Destino</th>
+                            <th>Data de Início</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Preenchido via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+
+            <h3 style="margin: 2rem 0 1rem;">Equipamentos por empresa</h3>
+            <div class="table-container">
+                <table id="equipmentAllocationsTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Patrimônio</th>
+                            <th>Equipamento</th>
+                            <th>Número de série</th>
+                            <th>Empresa Cliente</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        const token = localStorage.getItem('sigeti_token');
+        if (!token) window.location.href = '/';
+
+        document.getElementById('logoutBtn').addEventListener('click', () => { localStorage.clear(); window.location.href = '/'; });
+
+        async function loadAllocations() {
+            try {
+                const [peopleRes, equipmentRes] = await Promise.all([
+                    fetch('/api/allocations/people', { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch('/api/allocations', { headers: { 'Authorization': `Bearer ${token}` } })
+                ]);
+                const data = await peopleRes.json();
+                const equipmentData = await equipmentRes.json();
+
+                const tbody = document.querySelector('#allocationsTable tbody');
+                tbody.innerHTML = '';
+
+                if (data.success && data.data.length > 0) {
+                    data.data.forEach(alloc => {
+                        const dateFormatted = new Date(alloc.start_date).toLocaleDateString('pt-BR');
+                        const isActive = !['FINISHED', 'ENCERRADO', 'INACTIVE', 'INATIVO'].includes(String(alloc.status || '').trim().toUpperCase());
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${alloc.id}</td>
+                                <td>${alloc.collaborator_id}</td>
+                                <td><strong>${alloc.professional_name}</strong></td>
+                                <td>${alloc.provider_company_name || '-'}</td>
+                                <td>${alloc.company_id}</td>
+                                <td><span style="color: var(--primary-color); font-weight: 600;">${alloc.company_name}</span></td>
+                                <td>${dateFormatted}</td>
+                                <td><span class="${isActive ? 'badge-active' : 'badge-finished'}">${isActive ? 'Ativo' : 'Encerrado'}</span></td>
+                                <td>
+                                    ${isActive ? `<button class="btn" style="padding: 0.3rem 0.6rem; background: var(--danger); font-size: 0.75rem;" onclick="removeAllocation(${alloc.id})">
+                                        <i data-lucide="x-circle" style="width: 14px; height: 14px; vertical-align: middle;"></i> Encerrar Vínculo
+                                    </button>` : '-'}
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    lucide.createIcons();
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">Nenhum profissional alocado no momento.</td></tr>`;
+                }
+
+                const equipmentTbody = document.querySelector('#equipmentAllocationsTable tbody');
+                equipmentTbody.innerHTML = '';
+                if (equipmentData.success && equipmentData.equipment && equipmentData.equipment.length > 0) {
+                    equipmentData.equipment.forEach(equipment => {
+                        const waitingDisposal = equipment.status === 'Aguardando descarte';
+                        equipmentTbody.innerHTML += `
+                            <tr>
+                                <td>${equipment.id}</td>
+                                <td>${equipment.patrimony_code || '-'}</td>
+                                <td><strong>${equipment.equipment_name}</strong></td>
+                                <td>${equipment.serial_number || '-'}</td>
+                                <td><span style="color: var(--primary-color); font-weight: 600;">${equipment.company_name}</span></td>
+                                <td><span class="badge-active">${equipment.status || 'Ativo'}</span></td>
+                                <td>
+                                    <button class="decision-action" onclick="toggleEquipmentDetails(event, ${equipment.id})">${waitingDisposal ? 'Clique para decidir' : 'Clique para ver detalhes'}</button>
+                                    ${equipment.disposal_status === 'Autorizado' ? `<button class="btn" style="margin-left: 0.5rem; padding: 0.3rem 0.6rem; background: var(--danger); font-size: 0.75rem;" onclick="eliminateDiscardedEquipment(event, ${equipment.id}, '${encodeURIComponent(equipment.equipment_name)}')">Eliminar</button>` : ''}
+                                </td>
+                            </tr>
+                            <tr id="equipment-details-${equipment.id}" class="equipment-details" hidden>
+                                <td colspan="7">
+                                    <strong>Empresa:</strong> ${equipment.company_name} (ID: ${equipment.company_id})<br>
+                                    <strong>Patrimônio:</strong> ${equipment.patrimony_code || '-'}<br>
+                                    <strong>O quê:</strong> ${equipment.equipment_name}<br>
+                                    <strong>Solicitado por:</strong> ${equipment.requested_by || 'Ainda não solicitado'}
+                                    ${equipment.request_date ? ` em ${formatDate(equipment.request_date)}` : ''}<br>
+                                    ${equipment.disposal_reason ? `<strong>Motivo da solicitação:</strong> ${equipment.disposal_reason}<br>` : ''}
+                                    ${equipment.disposal_status && equipment.disposal_status !== 'Pendente' ? `<strong>Decisão:</strong> ${equipment.disposal_status}<br><strong>Alterado/autorizado por:</strong> ${equipment.decided_by || 'Não informado'} em ${equipment.decision_date ? formatDate(equipment.decision_date) : 'data não informada'}<br><strong>Motivo da decisão:</strong> ${equipment.decision_notes || 'Não informado'}<br>` : ''}
+                                    <div style="margin-top: 0.75rem;">
+                                        ${equipment.disposal_status === 'Pendente' ? `<button class="btn" style="background: var(--success);" onclick="decideDisposal(event, ${equipment.disposal_request_id}, ${equipment.id}, 'Autorizado')">Autorizar descarte</button>
+                                        <button class="btn" style="background: var(--danger);" onclick="decideDisposal(event, ${equipment.disposal_request_id}, ${equipment.id}, 'Negado')">Negar descarte</button>` : equipment.disposal_status === 'Negado' ? `<button class="btn" style="background: var(--warning);" onclick="requestDisposal(event, ${equipment.id}, '${encodeURIComponent(equipment.equipment_name)}')">Solicitar descarte novamente</button>` : equipment.disposal_status ? 'Decisão já registrada' : `<button class="btn" style="background: var(--warning);" onclick="requestDisposal(event, ${equipment.id}, '${encodeURIComponent(equipment.equipment_name)}')">Solicitar descarte</button>`}
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    equipmentTbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Nenhum equipamento alocado no momento.</td></tr>`;
+                }
+                lucide.createIcons();
+            } catch (error) {
+                console.error('Erro ao carregar alocações', error);
+            }
+        }
+
+        async function removeAllocation(id) {
+            if (!confirm('Deseja realmente encerrar esta alocação?')) return;
+
+            try {
+                const res = await fetch(`/api/allocations/${id}/remove`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const result = await res.json();
+                alert(result.message);
+                if (result.success) {
+                    loadAllocations();
+                }
+            } catch (error) {
+                alert('Erro ao encerrar alocação.');
+            }
+        }
+
+        function formatDate(value) {
+            return new Date(value).toLocaleString('pt-BR');
+        }
+
+        function toggleEquipmentDetails(event, id) {
+            if (event) event.stopPropagation();
+            const details = document.getElementById(`equipment-details-${id}`);
+            if (details) details.hidden = !details.hidden;
+        }
+
+        async function requestDisposal(event, id, encodedName) {
+            event.stopPropagation();
+            const reason = prompt(`Motivo para solicitar o descarte de "${decodeURIComponent(encodedName)}":`);
+            if (reason === null || !reason.trim()) return;
+
+            try {
+                const res = await fetch('/api/descarte/solicitar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ equipment_id: id, reason: reason.trim() })
+                });
+                const result = await res.json();
+                alert(result.message);
+                if (result.success) loadAllocations();
+            } catch (error) {
+                alert('Erro ao solicitar descarte.');
+            }
+        }
+
+        async function decideDisposal(event, requestId, equipmentId, decision) {
+            event.stopPropagation();
+            const user = JSON.parse(localStorage.getItem('sigeti_user') || '{}');
+            const notes = prompt(`Motivo para ${decision === 'Autorizado' ? 'autorizar' : 'negar'} o descarte:`);
+            if (notes === null || !notes.trim()) return;
+
+            const res = await fetch('/api/descarte/decidir', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ request_id: requestId, equipment_id: equipmentId, status: decision, decision_notes: notes.trim() })
+            });
+            const result = await res.json();
+            alert(`${result.message}${result.success && user.name ? `\nResponsável: ${user.name}` : ''}`);
+            if (result.success) loadAllocations();
+        }
+
+        async function eliminateDiscardedEquipment(event, equipmentId, encodedName) {
+            event.stopPropagation();
+            const name = decodeURIComponent(encodedName);
+            if (!confirm(`Deseja eliminar definitivamente o equipamento "${name}"?`)) return;
+
+            try {
+                const unallocateRes = await fetch(`/api/equipment/${equipmentId}/unallocate`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const unallocateData = await unallocateRes.json();
+                if (!unallocateRes.ok || !unallocateData.success) {
+                    alert(unallocateData.message || 'Não foi possível deixar o equipamento órfão.');
+                    return;
+                }
+
+                const deleteRes = await fetch(`/api/equipment/${equipmentId}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ delete_history: false })
+                });
+                const deleteData = await deleteRes.json();
+                alert(deleteData.message);
+                if (deleteData.success) loadAllocations();
+            } catch (error) {
+                alert('Erro ao eliminar equipamento descartado.');
+            }
+        }
+
+        document.getElementById('searchAlloc').addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('#allocationsTable tbody tr');
+            rows.forEach(row => {
+                row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none';
+            });
+            const equipmentRows = document.querySelectorAll('#equipmentAllocationsTable tbody tr');
+            equipmentRows.forEach(row => {
+                row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none';
+            });
+        });
+
+        loadAllocations();
+    </script>
+</body>
+
+</html>
