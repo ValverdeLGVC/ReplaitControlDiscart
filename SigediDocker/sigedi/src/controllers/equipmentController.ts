@@ -99,10 +99,8 @@ export const deleteEquipment = async (req: AuthRequest, res: Response): Promise<
             return;
         }
 
-        await pool.execute('SET FOREIGN_KEY_CHECKS = 0');
         await pool.execute('DELETE FROM disposal_requests WHERE equipment_id = ?', [id]);
         await pool.execute('DELETE FROM equipment WHERE id = ?', [id]);
-        await pool.execute('SET FOREIGN_KEY_CHECKS = 1');
 
         if (userId) {
             await logAction(userId, 'EXCLUSÃO DEFINITIVA', 'equipment', Number(id), `Equipamento ID ${id} excluído.`);
@@ -111,7 +109,6 @@ export const deleteEquipment = async (req: AuthRequest, res: Response): Promise<
 
         res.json({ success: true, message: 'Equipamento excluído permanentemente!' });
     } catch (error: any) {
-        await pool.execute('SET FOREIGN_KEY_CHECKS = 1').catch(() => {});
         res.status(500).json({ success: false, message: `Erro ao excluir equipamento: ${error.message}` });
     }
 };

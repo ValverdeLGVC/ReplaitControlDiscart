@@ -138,7 +138,7 @@ CREATE TABLE `equipment` (
   `status` enum('Funcionando','Funcionando parcialmente','Danificado','Sem teste','Em manutenção','Aguardando avaliação','Aguardando descarte','Descartado') NOT NULL,
   `is_working` tinyint(1) NOT NULL DEFAULT 1,
   `location` varchar(100) DEFAULT NULL,
-  `client_company_id` int(11) NOT NULL,
+  `client_company_id` int(11) DEFAULT NULL,
   `professional_in_charge_id` int(11) DEFAULT NULL,
   `specs` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`specs`)),
   `observations` text DEFAULT NULL,

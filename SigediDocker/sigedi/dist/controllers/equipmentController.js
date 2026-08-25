@@ -95,10 +95,8 @@ const deleteEquipment = async (req, res) => {
             res.json({ success: true, ready: true });
             return;
         }
-        await db_1.default.execute('SET FOREIGN_KEY_CHECKS = 0');
         await db_1.default.execute('DELETE FROM disposal_requests WHERE equipment_id = ?', [id]);
         await db_1.default.execute('DELETE FROM equipment WHERE id = ?', [id]);
-        await db_1.default.execute('SET FOREIGN_KEY_CHECKS = 1');
         if (userId) {
             await (0, historyLogger_1.logAction)(userId, 'EXCLUSÃO DEFINITIVA', 'equipment', Number(id), `Equipamento ID ${id} excluído.`);
         }
@@ -107,7 +105,6 @@ const deleteEquipment = async (req, res) => {
         res.json({ success: true, message: 'Equipamento excluído permanentemente!' });
     }
     catch (error) {
-        await db_1.default.execute('SET FOREIGN_KEY_CHECKS = 1').catch(() => { });
         res.status(500).json({ success: false, message: `Erro ao excluir equipamento: ${error.message}` });
     }
 };
